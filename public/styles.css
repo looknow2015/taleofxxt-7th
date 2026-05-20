@@ -531,15 +531,37 @@ main {
   }
 
   .site-header {
-    min-height: 560px;
+    display: block;
+    min-height: 0;
+    overflow: visible;
   }
 
   .hero-image {
-    object-position: 61% 42%;
+    position: relative;
+    z-index: 0;
+    display: block;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
+    object-position: center;
+    background: var(--night);
+  }
+
+  .hero-overlay {
+    display: none;
+  }
+
+  .hero-content {
+    display: grid;
+    gap: 18px;
+    padding-top: 20px;
+    padding-bottom: 22px;
+    background:
+      linear-gradient(180deg, rgba(17, 26, 30, 0.98), rgba(31, 45, 34, 0.94));
   }
 
   h1 {
-    font-size: 48px;
+    font-size: 44px;
   }
 
   .intro {
