@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>小西天儿物语七周年封面投票</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <img class="hero-image" src="/assets/hero-xiaoxitian.png" alt="小西天儿物语主视觉">
+      <div class="hero-overlay" aria-hidden="true"></div>
+      <div class="hero-content">
+        <div class="header-copy">
+          <p class="eyebrow">七周年特别企划</p>
+          <h1>封面人气墙</h1>
+          <p class="intro">喜欢哪期就点哪张封面，每人三票，点一下投一票。</p>
+        </div>
+        <aside class="stats-panel" aria-label="投票统计">
+          <span class="stats-label">总票数</span>
+          <strong id="totalVotes">0</strong>
+          <span id="voteAllowance" class="stats-note">每人可投 3 票</span>
+        </aside>
+      </div>
+    </header>
+
+    <main>
+      <section class="toolbar" aria-label="筛选和排序">
+        <label class="search-box">
+          <span>搜索</span>
+          <input id="searchInput" type="search" placeholder="节目标题、期数、关键词">
+        </label>
+        <div class="segmented" role="group" aria-label="排序">
+          <button class="segmented-button active" type="button" data-sort="newest">最新</button>
+          <button class="segmented-button" type="button" data-sort="votes">票数</button>
+          <button class="segmented-button" type="button" data-sort="oldest">最早</button>
+        </div>
+      </section>
+
+      <section class="rank-board" aria-label="当前排行">
+        <div class="section-heading">
+          <h2>当前热榜</h2>
+          <span id="episodeCount">加载中</span>
+        </div>
+        <ol id="leaderboard" class="leaderboard"></ol>
+      </section>
+
+      <section class="message-board" aria-label="匿名留言">
+        <form id="messageForm" class="message-form">
+          <div class="message-copy">
+            <h2>匿名留言</h2>
+            <p>写给七周年，后台收集，不公开展示。</p>
+          </div>
+          <label class="message-input">
+            <span>留言</span>
+            <textarea id="messageInput" maxlength="500" rows="3" placeholder="想对节目说点什么"></textarea>
+          </label>
+          <button id="messageSubmit" class="message-submit" type="submit">送出</button>
+        </form>
+      </section>
+
+      <section id="wall" class="masonry" aria-live="polite"></section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <template id="episodeCardTemplate">
+      <article class="episode-card">
+        <button class="cover-button" type="button">
+          <img alt="" loading="lazy">
+          <span class="vote-badge">投票</span>
+        </button>
+        <div class="episode-meta">
+          <div>
+            <p class="episode-no"></p>
+            <h2></h2>
+          </div>
+          <strong class="vote-count"></strong>
+        </div>
+        <p class="summary"></p>
+        <a class="listen-link" target="_blank" rel="noreferrer">去收听</a>
+      </article>
+    </template>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

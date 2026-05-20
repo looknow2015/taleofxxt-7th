@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" role="img" aria-label="小西天儿物语封面占位图">
+  <rect width="640" height="640" fill="#1d1b18"/>
+  <circle cx="320" cy="236" r="112" fill="#b33b24"/>
+  <rect x="150" y="382" width="340" height="24" rx="12" fill="#f7f4ef"/>
+  <rect x="190" y="430" width="260" height="18" rx="9" fill="#ded5c8"/>
+  <text x="320" y="278" text-anchor="middle" font-size="78" font-family="sans-serif" fill="#fffaf2">小西天儿</text>
+</svg>

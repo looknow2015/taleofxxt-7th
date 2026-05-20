@@ -1,0 +1,13 @@
+{
+  "name": "xiaoxitian-vote-wall",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A cover-wall voting site for 小西天儿物语 episodes.",
+  "scripts": {
+    "start": "node server.js",
+    "import:rss": "node scripts/import-rss.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

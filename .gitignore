@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+
+# Runtime data is collected by the server and should not be committed publicly.
+data/votes.json
+data/messages.json
+
