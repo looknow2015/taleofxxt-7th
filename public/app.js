@@ -50,7 +50,11 @@ function formatDuration(seconds) {
 }
 
 function coverSrc(url) {
-  return url ? `/api/cover?url=${encodeURIComponent(url)}` : "/fallback-cover.svg";
+  return url || "/fallback-cover.svg";
+}
+
+function thumbnailCoverSrc(url) {
+  return url ? url.replace(/_(?:320|640)x(?:320|640)(\.[a-z]+)$/i, "_80x80$1") : "/fallback-cover.svg";
 }
 
 function filterAndSortEpisodes() {
@@ -114,6 +118,14 @@ function renderWall() {
     node.classList.toggle("voted", voted);
     image.src = coverSrc(episode.coverUrl);
     image.alt = episode.title;
+    image.addEventListener("error", () => {
+      if (image.dataset.fallbackApplied === "true") {
+        image.src = "/fallback-cover.svg";
+        return;
+      }
+      image.dataset.fallbackApplied = "true";
+      image.src = thumbnailCoverSrc(episode.coverUrl);
+    });
     badge.textContent = voted ? "已投" : "投票";
     episodeNo.textContent = `vol.${episode.episodeNo}${episode.duration ? ` · ${formatDuration(episode.duration)}` : ""}`;
     title.textContent = episode.title.replace(/^vol\.\d+\s*/i, "");
