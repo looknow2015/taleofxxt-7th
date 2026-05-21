@@ -94,13 +94,10 @@ function readBody(req) {
   });
 }
 
-function getClientKey(req, anonymousId) {
-  const forwarded = req.headers["x-forwarded-for"];
-  const ip = Array.isArray(forwarded) ? forwarded[0] : String(forwarded || req.socket.remoteAddress || "");
-  const ua = String(req.headers["user-agent"] || "");
+function getClientKey(anonymousId) {
   return crypto
     .createHash("sha256")
-    .update(`${anonymousId || "anonymous"}|${ip.split(",")[0]}|${ua}`)
+    .update(anonymousId || "anonymous")
     .digest("hex");
 }
 
@@ -309,7 +306,7 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/vote-status") {
     const anonymousId = String(url.searchParams.get("anonymousId") || "");
     const votes = await getVotesStore();
-    const voterHash = getClientKey(req, anonymousId);
+    const voterHash = getClientKey(anonymousId);
     const records = getVoterRecords(votes, voterHash);
     send(res, 200, JSON.stringify({
       maxVotes: maxVotesPerUser,
@@ -333,7 +330,7 @@ async function handleApi(req, res, url) {
     }
 
     const votes = await getVotesStore();
-    const voterHash = getClientKey(req, anonymousId);
+    const voterHash = getClientKey(anonymousId);
     const recordKey = `${episodeId}:${voterHash}`;
     const userRecords = getVoterRecords(votes, voterHash);
     const alreadyVoted = userRecords.some(record => record.episodeId === episodeId);

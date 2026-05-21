@@ -28,7 +28,7 @@ http://localhost:4173
 当前版本每个匿名用户最多可投 3 票，同一期节目只能投 1 票，并做了两层限制：
 
 - 浏览器端用 `localStorage` 保存匿名用户 ID。
-- 服务端用匿名用户 ID、IP、User-Agent 的哈希值限制总票数和单期重复投票。
+- 服务端用匿名用户 ID 的哈希值限制总票数和单期重复投票。
 
 本地开发时会写入 `data/votes.json`。线上配置 Supabase 后，投票会写入 `xxt_votes` 表。
 
