@@ -11,6 +11,7 @@ const episodesPath = path.join(dataDir, "episodes.json");
 const votesPath = path.join(dataDir, "votes.json");
 const messagesPath = path.join(dataDir, "messages.json");
 const maxVotesPerUser = 3;
+const adminToken = process.env.ADMIN_TOKEN || "xxt-admin";
 
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "0.0.0.0";
@@ -88,7 +89,71 @@ function getVoterRecords(votes, voterHash) {
   return (votes.records || []).filter(record => record.voterHash === voterHash);
 }
 
+function requireAdmin(req, res, url) {
+  const token = url.searchParams.get("token") || req.headers["x-admin-token"];
+  if (token === adminToken) return true;
+  send(res, 401, JSON.stringify({ error: "Unauthorized." }));
+  return false;
+}
+
+function csvEscape(value) {
+  const text = String(value ?? "");
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, "\"\"")}"` : text;
+}
+
+async function getAdminExport() {
+  const [episodes, votes, messages] = await Promise.all([
+    readJson(episodesPath, []),
+    readJson(votesPath, { totals: {}, records: [] }),
+    readJson(messagesPath, [])
+  ]);
+  const voteRows = episodes
+    .map(episode => ({
+      episodeId: episode.id,
+      episodeNo: episode.episodeNo,
+      title: episode.title,
+      votes: Number(votes.totals?.[episode.id] || 0)
+    }))
+    .sort((a, b) => b.votes - a.votes || b.episodeNo - a.episodeNo);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    totalVotes: voteRows.reduce((sum, episode) => sum + episode.votes, 0),
+    voterCount: new Set((votes.records || []).map(record => record.voterHash)).size,
+    voteRows,
+    voteRecords: votes.records || [],
+    messages
+  };
+}
+
 async function handleApi(req, res, url) {
+  if (req.method === "GET" && url.pathname === "/api/admin/export") {
+    if (!requireAdmin(req, res, url)) return;
+    const data = await getAdminExport();
+    const format = url.searchParams.get("format") || "json";
+
+    if (format === "votes.csv") {
+      const rows = [
+        ["episodeId", "episodeNo", "title", "votes"],
+        ...data.voteRows.map(row => [row.episodeId, row.episodeNo, row.title, row.votes])
+      ];
+      send(res, 200, rows.map(row => row.map(csvEscape).join(",")).join("\n"), "text/csv; charset=utf-8");
+      return;
+    }
+
+    if (format === "messages.csv") {
+      const rows = [
+        ["id", "createdAt", "message"],
+        ...data.messages.map(row => [row.id, row.createdAt, row.message])
+      ];
+      send(res, 200, rows.map(row => row.map(csvEscape).join(",")).join("\n"), "text/csv; charset=utf-8");
+      return;
+    }
+
+    send(res, 200, JSON.stringify(data));
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/cover") {
     const coverUrl = url.searchParams.get("url") || "";
     const parsed = new URL(coverUrl);
@@ -231,7 +296,8 @@ async function handleApi(req, res, url) {
 }
 
 async function serveStatic(req, res, url) {
-  const cleanPath = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
+  const routePath = url.pathname === "/admin" ? "/admin.html" : url.pathname;
+  const cleanPath = decodeURIComponent(routePath === "/" ? "/index.html" : routePath);
   const filePath = path.normalize(path.join(publicDir, cleanPath));
 
   if (!filePath.startsWith(publicDir)) {

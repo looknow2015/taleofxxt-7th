@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>小西天儿物语后台导出</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body class="admin-page">
+    <main class="admin-shell">
+      <section class="admin-header">
+        <div>
+          <p class="eyebrow">后台导出</p>
+          <h1>投票与留言</h1>
+        </div>
+        <a href="/">返回首页</a>
+      </section>
+
+      <form id="adminLogin" class="admin-login">
+        <label>
+          <span>后台口令</span>
+          <input id="adminToken" type="password" autocomplete="current-password" placeholder="输入 ADMIN_TOKEN">
+        </label>
+        <button type="submit">进入</button>
+      </form>
+
+      <section id="adminDashboard" class="admin-dashboard" hidden>
+        <div class="admin-actions">
+          <button type="button" data-download="json">下载 JSON</button>
+          <button type="button" data-download="votes.csv">下载投票 CSV</button>
+          <button type="button" data-download="messages.csv">下载留言 CSV</button>
+        </div>
+
+        <div class="admin-summary">
+          <article>
+            <span>总票数</span>
+            <strong id="adminTotalVotes">0</strong>
+          </article>
+          <article>
+            <span>投票用户</span>
+            <strong id="adminVoterCount">0</strong>
+          </article>
+          <article>
+            <span>留言数</span>
+            <strong id="adminMessageCount">0</strong>
+          </article>
+        </div>
+
+        <section class="admin-section">
+          <h2>投票排行</h2>
+          <div class="admin-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>期数</th>
+                  <th>标题</th>
+                  <th>票数</th>
+                </tr>
+              </thead>
+              <tbody id="adminVoteRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="admin-section">
+          <h2>匿名留言</h2>
+          <div id="adminMessages" class="admin-messages"></div>
+        </section>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="/admin.js" defer></script>
+  </body>
+</html>
