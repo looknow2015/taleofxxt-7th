@@ -12,6 +12,9 @@ const votesPath = path.join(dataDir, "votes.json");
 const messagesPath = path.join(dataDir, "messages.json");
 const maxVotesPerUser = 3;
 const adminToken = process.env.ADMIN_TOKEN || "xxt-admin";
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const useSupabase = Boolean(supabaseUrl && supabaseServiceRoleKey);
 
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "0.0.0.0";
@@ -41,6 +44,31 @@ async function readJson(file, fallback) {
 async function writeJson(file, value) {
   await fs.mkdir(path.dirname(file), { recursive: true });
   await fs.writeFile(file, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function normalizeSupabaseUrl(url) {
+  return url ? url.replace(/\/$/, "") : "";
+}
+
+async function supabaseRequest(pathname, options = {}) {
+  const response = await fetch(`${normalizeSupabaseUrl(supabaseUrl)}/rest/v1/${pathname}`, {
+    ...options,
+    headers: {
+      "apikey": supabaseServiceRoleKey,
+      "Authorization": `Bearer ${supabaseServiceRoleKey}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation",
+      ...(options.headers || {})
+    }
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Supabase request failed: ${response.status} ${text}`);
+  }
+
+  if (response.status === 204) return null;
+  return response.json();
 }
 
 function send(res, status, body, type = "application/json; charset=utf-8") {
@@ -78,7 +106,7 @@ function getClientKey(req, anonymousId) {
 
 async function getMergedEpisodes() {
   const episodes = await readJson(episodesPath, []);
-  const votes = await readJson(votesPath, { totals: {}, records: [] });
+  const votes = await getVotesStore();
   return episodes.map(episode => ({
     ...episode,
     votes: Number(votes.totals?.[episode.id] || 0)
@@ -87,6 +115,83 @@ async function getMergedEpisodes() {
 
 function getVoterRecords(votes, voterHash) {
   return (votes.records || []).filter(record => record.voterHash === voterHash);
+}
+
+function normalizeVoteRecord(record) {
+  return {
+    key: record.key || `${record.episode_id || record.episodeId}:${record.voter_hash || record.voterHash}`,
+    episodeId: record.episode_id || record.episodeId,
+    voterHash: record.voter_hash || record.voterHash,
+    createdAt: record.created_at || record.createdAt
+  };
+}
+
+function normalizeMessage(record) {
+  return {
+    id: record.id,
+    message: record.message,
+    createdAt: record.created_at || record.createdAt
+  };
+}
+
+async function getVotesStore() {
+  if (!useSupabase) return readJson(votesPath, { totals: {}, records: [] });
+
+  const records = (await supabaseRequest("xxt_votes?select=key,episode_id,voter_hash,created_at&order=created_at.asc"))
+    .map(normalizeVoteRecord);
+  const totals = {};
+
+  for (const record of records) {
+    totals[record.episodeId] = Number(totals[record.episodeId] || 0) + 1;
+  }
+
+  return { totals, records };
+}
+
+async function addVoteRecord(record) {
+  if (!useSupabase) {
+    const votes = await readJson(votesPath, { totals: {}, records: [] });
+    votes.totals[record.episodeId] = Number(votes.totals[record.episodeId] || 0) + 1;
+    votes.records.push(record);
+    await writeJson(votesPath, votes);
+    return votes;
+  }
+
+  await supabaseRequest("xxt_votes", {
+    method: "POST",
+    body: JSON.stringify({
+      key: record.key,
+      episode_id: record.episodeId,
+      voter_hash: record.voterHash,
+      created_at: record.createdAt
+    })
+  });
+
+  return getVotesStore();
+}
+
+async function getMessagesStore() {
+  if (!useSupabase) return readJson(messagesPath, []);
+  return (await supabaseRequest("xxt_messages?select=id,message,created_at&order=created_at.desc"))
+    .map(normalizeMessage);
+}
+
+async function addMessageRecord(record) {
+  if (!useSupabase) {
+    const messages = await readJson(messagesPath, []);
+    messages.push(record);
+    await writeJson(messagesPath, messages);
+    return;
+  }
+
+  await supabaseRequest("xxt_messages", {
+    method: "POST",
+    body: JSON.stringify({
+      id: record.id,
+      message: record.message,
+      created_at: record.createdAt
+    })
+  });
 }
 
 function requireAdmin(req, res, url) {
@@ -104,8 +209,8 @@ function csvEscape(value) {
 async function getAdminExport() {
   const [episodes, votes, messages] = await Promise.all([
     readJson(episodesPath, []),
-    readJson(votesPath, { totals: {}, records: [] }),
-    readJson(messagesPath, [])
+    getVotesStore(),
+    getMessagesStore()
   ]);
   const voteRows = episodes
     .map(episode => ({
@@ -203,7 +308,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/vote-status") {
     const anonymousId = String(url.searchParams.get("anonymousId") || "");
-    const votes = await readJson(votesPath, { totals: {}, records: [] });
+    const votes = await getVotesStore();
     const voterHash = getClientKey(req, anonymousId);
     const records = getVoterRecords(votes, voterHash);
     send(res, 200, JSON.stringify({
@@ -227,7 +332,7 @@ async function handleApi(req, res, url) {
       return;
     }
 
-    const votes = await readJson(votesPath, { totals: {}, records: [] });
+    const votes = await getVotesStore();
     const voterHash = getClientKey(req, anonymousId);
     const recordKey = `${episodeId}:${voterHash}`;
     const userRecords = getVoterRecords(votes, voterHash);
@@ -244,14 +349,13 @@ async function handleApi(req, res, url) {
     }
 
     if (!alreadyVoted) {
-      votes.totals[episodeId] = Number(votes.totals[episodeId] || 0) + 1;
-      votes.records.push({
+      await addVoteRecord({
         key: recordKey,
         episodeId,
         voterHash,
         createdAt: new Date().toISOString()
       });
-      await writeJson(votesPath, votes);
+      votes.totals[episodeId] = Number(votes.totals[episodeId] || 0) + 1;
     }
 
     send(res, 200, JSON.stringify({
@@ -280,13 +384,11 @@ async function handleApi(req, res, url) {
       return;
     }
 
-    const messages = await readJson(messagesPath, []);
-    messages.push({
+    await addMessageRecord({
       id: crypto.randomUUID(),
       message: text,
       createdAt: new Date().toISOString()
     });
-    await writeJson(messagesPath, messages);
 
     send(res, 200, JSON.stringify({ ok: true }));
     return;

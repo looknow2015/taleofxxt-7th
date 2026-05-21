@@ -1,6 +1,6 @@
 # 小西天儿物语封面投票墙
 
-一个用于七周年活动的轻量网页：自动导入 RSS 节目封面，瀑布流展示，点击封面给对应节目投 1 票，并在本地 JSON 文件里统计票数。
+一个用于七周年活动的轻量网页：自动导入 RSS 节目封面，瀑布流展示，点击封面给对应节目投票，并收集匿名留言。线上建议用 Supabase 保存投票和留言；没有配置 Supabase 时会回退到本地 JSON 文件。
 
 ## 运行
 
@@ -30,11 +30,11 @@ http://localhost:4173
 - 浏览器端用 `localStorage` 保存匿名用户 ID。
 - 服务端用匿名用户 ID、IP、User-Agent 的哈希值限制总票数和单期重复投票。
 
-这适合朋友局、周年活动和轻量公开传播。如果要承受大流量或更强防刷，可以把 `data/votes.json` 换成 Supabase、Firebase 或正式数据库。
+本地开发时会写入 `data/votes.json`。线上配置 Supabase 后，投票会写入 `xxt_votes` 表。
 
 ## 匿名留言
 
-首页的匿名留言只提交到后台，不会在网站中公开展示。留言会写入 `data/messages.json`，每条包含：
+首页的匿名留言只提交到后台，不会在网站中公开展示。本地开发时会写入 `data/messages.json`；线上配置 Supabase 后会写入 `xxt_messages` 表。每条包含：
 
 ```json
 {
@@ -43,6 +43,25 @@ http://localhost:4173
   "createdAt": "提交时间"
 }
 ```
+
+## Supabase 持久化
+
+1. 在 Supabase 新建项目。
+2. 打开 SQL Editor，执行 `supabase-schema.sql`。
+3. 在 Supabase 项目设置里找到：
+   - `Project URL`
+   - `service_role` key
+4. 在 Render 的 Web Service 里添加环境变量：
+
+```text
+SUPABASE_URL=你的 Project URL
+SUPABASE_SERVICE_ROLE_KEY=你的 service_role key
+ADMIN_TOKEN=你的后台口令
+```
+
+5. 保存后重新部署 Render。
+
+注意：`service_role` key 只配置在 Render 环境变量里，不要写进前端文件、GitHub 仓库或公开页面。
 
 ## 替换为自有封面
 
